@@ -28,13 +28,20 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
-      uses: docker/metadata-action@v4.3.0
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=semver,pattern={{raw}}
+    - name: Build Docker image
+      run: |
+        docker build . \
+          --file azul11/Dockerfile \
+          --tag index.docker.io/sagarkundral/demo-java-sbom:azul11
+        docker build . \
+          --file correto17/Dockerfile \
+          --tag index.docker.io/sagarkundral/demo-java-sbom:correto17
+        docker build . \
+          --file openjdk11/Dockerfile \
+          --tag index.docker.io/sagarkundral/demo-java-sbom:openjdk11
+        docker build . \
+          --file ubuntujre7/Dockerfile \
+          --tag index.docker.io/sagarkundral/demo-java-sbom:ubuntujre7
 
     - name: Push Docker image
       id: docker-build-push
