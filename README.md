@@ -99,7 +99,7 @@ To sign attestations, install Cosign and generate a public-private key pair.
 ```
 cosign generate-key-pair
 ```
-This will generate the `cosign.key` and `cosign.pub`
+This will generate the `cosign.key` and `cosign.pub` files in the current directory.
 
 To sign attestations, use the cosign attest command. This command will sign your attestations and publish them to the OCI registry.
 
@@ -153,3 +153,24 @@ spec:
                   operator: Equals
                   value: false
 ```
+
+To verify the policy, deploy the policy and try to run two different images. The `openjdk11` image has `Oracle` in the package urls and will be blocked by the policy. 
+
+```
+kubectl run openjdk11-testpod --image=ghcr.io/nirmata/demo-java-sbom:openjdk11
+Error from server: admission webhook "mutate.kyverno.svc-fail" denied the request:
+
+resource Pod/default/openjdk11-testpod was blocked due to the following policies
+
+attest-sbom:
+  attest: '.attestations[0].attestors[0].entries[0].keys: attestation checks failed
+    for ghcr.io/nirmata/demo-java-sbom:openjdk11 and predicate https://syft.org/BOM/v1: '
+```
+
+Try running the `correto17` image and it will go through as it does not contain `Oracle` in the package urls. 
+
+```
+kubectl run correto17-testpod --image=ghcr.io/nirmata/demo-java-sbom:correto17
+pod/correto17-testpod created
+```
+
