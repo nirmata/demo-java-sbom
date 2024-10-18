@@ -104,6 +104,13 @@ This will generate the `cosign.key` and `cosign.pub`
 To sign attestations, use the cosign attest command. This command will sign your attestations and publish them to the OCI registry.
 
 ```
-cosign attest --key cosign.key --predicate <file> --type <predicate type>  ${IMAGE} # ${IMAGE} is REPOSITORY/PATH/NAME:TAG
+# ${IMAGE} is REPOSITORY/PATH/NAME:TAG
+cosign attest --key cosign.key --predicate <file> --type <predicate type>  ${IMAGE} 
 
+```
+
+The following cosign command creates the in-toto format attestation and signs it with the specified credentials using the custom predicate type https://syft.org/BOM/v1:
+
+```
+cosign attest ghcr.io/nirmata/demo-java-sbom:ubuntujre7 --key cosign.key --predicate demo-java-sbom/sboms/ubuntujre7.json --type https://syft.org/BOM/v1
 ```
