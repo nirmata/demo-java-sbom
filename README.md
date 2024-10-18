@@ -76,7 +76,7 @@ Newer Java versions have a `jrt-fs` that contains information on the vendor:
 
 Package URL's for different images. 
 
-```
+```json 
 cat openjdk11.json | jq ".artifacts[].purl"
 
 "pkg:deb/debian/adduser@3.118?arch=all&distro=debian-11"
@@ -183,8 +183,10 @@ cat openjdk11.json | jq ".artifacts[].purl"
 "pkg:deb/debian/zlib1g@1:1.2.11.dfsg-2%2Bdeb11u1?arch=arm64&upstream=zlib&distro=debian-11"
 ```
 
-```
+```json
+
 cat correto17.json | jq ".artifacts[].purl"
+
 "pkg:pypi/amazon-linux-extras@2.0.3"
 "pkg:rpm/amzn/amazon-linux-extras@2.0.3-1.amzn2?arch=noarch&upstream=amazon-linux-extras-2.0.3-1.amzn2.src.rpm&distro=amzn-2"
 "pkg:rpm/amzn/basesystem@10.0-7.amzn2.0.1?arch=noarch&upstream=basesystem-10.0-7.amzn2.0.1.src.rpm&distro=amzn-2"
