@@ -91,3 +91,19 @@ Newer Java versions have a `jrt-fs` that contains information on the vendor:
       }
     }
 ```
+
+## SBOM attestation and verification using Kyverno policy
+
+To sign attestations, install Cosign and generate a public-private key pair.
+
+```
+cosign generate-key-pair
+```
+This will generate the `cosign.key` and `cosign.pub`
+
+To sign attestations, use the cosign attest command. This command will sign your attestations and publish them to the OCI registry.
+
+```
+cosign attest --key cosign.key --predicate <file> --type <predicate type>  ${IMAGE} # ${IMAGE} is REPOSITORY/PATH/NAME:TAG
+
+```
