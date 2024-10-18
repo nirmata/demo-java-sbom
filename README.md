@@ -136,6 +136,18 @@ spec:
                   value: false
 ```
 
+Verify the package URL for the images. 
+
+```
+cat openjdk11.json | jq ".artifacts[].purl" | grep -i oracle
+"pkg:generic/oracle/openjdk@11.0.16"
+```
+
+```
+cat correto17.json | jq ".artifacts[].purl" | grep -i oracle
+```
+
+
 To verify the policy, deploy the policy and try to run two different images. The `openjdk11` image has `Oracle` in the package urls and will be blocked by the policy. 
 
 ```
