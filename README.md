@@ -2,24 +2,6 @@
 
 Demo of Java SBOM verification for different JDK / JRE 
 
-## Building
-
-Build images:
-
-```sh
-make build
-```
-
-Push images:
-```sh
-make push
-```
-
-Generate SBOMs:
-```sh
-make sbom
-```
-
 ## Checking SBOMs
 
 Newer Java versions have a `jrt-fs` that contains information on the vendor:
@@ -172,5 +154,23 @@ Try running the `correto17` image and it will go through as it does not contain 
 ```
 kubectl run correto17-testpod --image=ghcr.io/nirmata/demo-java-sbom:correto17
 pod/correto17-testpod created
+```
+
+## Building
+
+Build images:
+
+```sh
+make build
+```
+
+Push images:
+```sh
+make push
+```
+
+Generate SBOMs:
+```sh
+make sbom
 ```
 
