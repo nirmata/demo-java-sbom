@@ -30,18 +30,10 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build . \
-          --file azul11/Dockerfile \
-          --tag index.docker.io/sagarkundral/demo-java-sbom:azul11
-        docker build . \
-          --file correto17/Dockerfile \
-          --tag index.docker.io/sagarkundral/demo-java-sbom:correto17
-        docker build . \
-          --file openjdk11/Dockerfile \
-          --tag index.docker.io/sagarkundral/demo-java-sbom:openjdk11
-        docker build . \
-          --file ubuntujre7/Dockerfile \
-          --tag index.docker.io/sagarkundral/demo-java-sbom:ubuntujre7
+        docker build . -file azul11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:azul11
+        docker build . -file correto17/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:correto17
+        docker build . -f openjdk11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:openjdk11
+        docker build . -f ubuntujre7/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:ubuntujre7
 
     - name: Push Docker image
       id: docker-build-push
