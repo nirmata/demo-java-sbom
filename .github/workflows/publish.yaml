@@ -19,10 +19,40 @@ jobs:
     permissions:
       contents: read
       packages: write
+      
     steps:
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Update APT and install Docker dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release
+
+    - name: Add Docker’s official GPG key
+      run: |
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    - name: Set up the Docker stable repository
+      run: |
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    - name: Install Docker Engine
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    - name: Verify Docker Installation
+      run: |
+        sudo docker --version
       
     - name: Log in to the Container registry
       uses: docker/login-action@v2.1.0
@@ -33,13 +63,10 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build . \
-          --file azul11/Dockerfile \
-          --tag index.docker.io/sagarkundral/demo-java-sbom:azul11
-        #docker build . -file azul11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:azul11
-        #docker build . -file correto17/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:correto17
-        #docker build . -f openjdk11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:openjdk11
-        #docker build . -f ubuntujre7/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:ubuntujre7
+        docker build . -file azul11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:azul11
+        docker build . -file correto17/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:correto17
+        docker build . -f openjdk11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:openjdk11
+        docker build . -f ubuntujre7/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:ubuntujre7
 
     - name: Push Docker image
       id: docker-build-push
