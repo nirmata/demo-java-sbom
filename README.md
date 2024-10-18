@@ -91,3 +91,65 @@ Newer Java versions have a `jrt-fs` that contains information on the vendor:
       }
     }
 ```
+
+## SBOM attestation and verification using Kyverno policy
+
+To sign attestations, install Cosign and generate a public-private key pair.
+
+```
+cosign generate-key-pair
+```
+This will generate the `cosign.key` and `cosign.pub`
+
+To sign attestations, use the cosign attest command. This command will sign your attestations and publish them to the OCI registry.
+
+```
+# ${IMAGE} is REPOSITORY/PATH/NAME:TAG
+cosign attest --key cosign.key --predicate <file> --type <predicate type>  ${IMAGE} 
+
+```
+
+The following cosign command creates the in-toto format attestation and signs it with the specified credentials using the custom predicate type https://syft.org/BOM/v1:
+
+```
+cosign attest ghcr.io/nirmata/demo-java-sbom:ubuntujre7 --key cosign.key --predicate demo-java-sbom/sboms/ubuntujre7.json --type https://syft.org/BOM/v1
+```
+
+The policy below verifies the package urls of the sbom and blocks pods if any of the package urls match oracle.
+
+```yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: attest-sbom
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  failurePolicy: Fail
+  rules:
+    - name: attest
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      verifyImages:
+      - imageReferences:
+        - "ghcr.io/nirmata*"
+        attestations:
+          - type: https://syft.org/BOM/v1
+            attestors:
+            - entries:
+              - keys:
+                  publicKeys: |-
+                    -----BEGIN PUBLIC KEY-----
+                    MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBgIImyAQSO4AI36uPF0FOj133HPJ
+                    COAbRQly2B64JDYc+OLhJPhJM8H2BNU5LFAh64Bt79QWKyKaH1vNZRGxUw==
+                    -----END PUBLIC KEY-----
+            conditions:
+              - all:
+                - key: "{{ regex_match('^.*oracle.*$', '{{ artifacts[].purl }}') }}"
+                  operator: Equals
+                  value: false
+```

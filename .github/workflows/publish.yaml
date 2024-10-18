@@ -1,0 +1,144 @@
+name: build-sign-attest
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:        
+      - main
+
+env:
+  REGISTRY: index.docker.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+
+  build-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ env.REGISTRY }}/${{ steps.repo.outputs.repo }}@${{ steps.docker-build-push.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Update APT and install Docker dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release
+
+    - name: Add Docker’s official GPG key
+      run: |
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    - name: Set up the Docker stable repository
+      run: |
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    - name: Install Docker Engine
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    - name: Verify Docker Installation
+      run: |
+        sudo docker --version
+      
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2.1.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build Docker image
+      run: |
+        docker build . -file azul11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:azul11
+        docker build . -file correto17/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:correto17
+        docker build . -f openjdk11/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:openjdk11
+        docker build . -f ubuntujre7/Dockerfile -t index.docker.io/sagarkundral/demo-java-sbom:ubuntujre7
+
+    - name: Push Docker image
+      id: docker-build-push
+      uses: docker/build-push-action@v4.0.0
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Lowercase repo name
+      id: repo
+      run: |
+        echo "repo=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
+    - name: Echo outputs
+      run: |
+        echo "tags: ${{ steps.meta.outputs.tags }}"
+        echo "digest: ${{ steps.docker-build-push.outputs.digest }}"
+        echo "image: ${{ env.REGISTRY }}/${{ steps.repo.outputs.repo }}@${{ steps.docker-build-push.outputs.digest }}"
+
+  generate-sbom:
+    runs-on: ubuntu-latest
+    needs: [build-image]
+    permissions:
+      contents: read
+    steps:
+
+    - name: Generate SBOM
+      uses: anchore/sbom-action@v0.13.3
+      with:
+        image:  ${{ needs.build-image.outputs.image }}
+        artifact-name: sbom.json
+        format: cyclonedx-json
+
+  create-attestations:
+    runs-on: ubuntu-latest
+    needs: [build-image, generate-sbom]
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write   # This is the key for OIDC!
+    steps:
+
+    - uses: actions/download-artifact@v3.0.2
+      with:
+        name: sbom.json
+
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v2.8.1
+      with:
+        cosign-release: v1.13.1
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v2.1.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Sign image
+      env:
+        COSIGN_EXPERIMENTAL: "true"
+      run: |          
+        cosign sign --force \
+        -a "repo=${{ github.repository }}" \
+        -a "workflow=${{ github.workflow }}" \
+        -a "ref=${{ github.sha }}" \
+         ${{ needs.build-image.outputs.image }}
+
+    - name : Attest SBOM
+      env:
+        COSIGN_EXPERIMENTAL: "true"
+      run: cosign attest --predicate sbom.json --type https://cyclonedx.org/BOM/v1   ${{ needs.build-image.outputs.image }}
